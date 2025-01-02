@@ -1,0 +1,13 @@
+.idea/
+__pycache__/
+.venv/
+.gradio/
+cookies/
+
+.env
+
+
+
+browser/profile/
+driver/
+

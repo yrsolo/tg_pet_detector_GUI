@@ -1,2 +1,8 @@
+Pillow
 gradio
 flask
+python-dotenv
+uvicorn
+fastapi
+yappa
+paramiko

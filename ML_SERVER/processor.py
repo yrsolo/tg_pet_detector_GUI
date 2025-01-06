@@ -2,8 +2,11 @@ from ML_SERVER.sam import sam_process
 from utils import pic2pil, pic2float
 from PIL import Image
 from SHADOW.pix2pix import generate_shadow
+from utils import memo
+from functools import lru_cache
 
-def process_image(image, text):
+@memo
+def process_image(image, params):
     """
     Обработка изображения и текста.
 
@@ -18,7 +21,12 @@ def process_image(image, text):
 
     processed_images, mask, text = sam_process(image)
 
-    processed_images = generate_shadow(processed_images, mask)
+    if 'rot' in params:
+        rot = int(params['rot'])
+    else:
+        rot = None
+
+    processed_images = generate_shadow(processed_images, mask, rots=rot)
 
     processed_text = str(text) + ' good'
 

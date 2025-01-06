@@ -1,21 +1,13 @@
 import torch
-import numpy as np
-import cv2
-from PIL import Image
-from markdown_it.rules_inline import image
-from seaborn import histplot
-from transformers import SamProcessor, SamModel
-from matplotlib import pyplot as plt
-import seaborn as sns
 
-from IPython.display import display
-from matplotlib import pyplot as plt
+import typing
 
 import numpy as np
 import requests
 from PIL import Image
 import io
 
+from constant import device, MAX_MAMO_SIZE
 
 def pic2int(image):
     if isinstance(image, torch.Tensor):
@@ -117,3 +109,49 @@ def swimg(image_arrays, server_url="http://127.0.0.1:9002/upload"):
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
+
+
+def hash_image(image):
+    image = pic2int(image)
+    image = Image.fromarray(image)
+    image = image.resize((512, 512))
+    image = image.convert("RGB")
+    image = image.tobytes()
+    return hash(image)
+
+
+def hash_all(x):
+    if isinstance(x, typing.Union[list, tuple]):
+        return hash(sum(hash_all(i) for i in x))
+
+    if isinstance(x, dict):
+        return hash(sum(hash_all(v) for v in x.values()))
+
+    if isinstance(x, np.ndarray):
+        return hash(x.tobytes())
+
+    if isinstance(x, torch.Tensor):
+        return hash(x.cpu().detach().numpy().tobytes())
+
+    if isinstance(x, Image.Image):
+        return hash_image(x)
+
+    if isinstance(x, typing.Hashable):
+        # print(type(x))
+        return hash(x)
+
+    return hash(str(x))
+
+
+def memo(func):
+    m = {}
+    def wrapper(*arg, **kwarg):
+        if len(m) > MAX_MAMO_SIZE:
+            m.clear()
+        hash = hash_all((*arg, *kwarg.items()))
+        if hash not in m:
+            m[hash] = func(*arg, **kwarg)
+        return m[hash]
+
+
+    return wrapper

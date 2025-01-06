@@ -1,7 +1,7 @@
 import pandas as pd
 from seaborn import histplot
 
-from utils import pic2float, pic2int, pic2pil, sigmoid, swimg, display
+from utils import pic2float, pic2int, pic2pil, sigmoid, swimg
 
 import torch
 import torch.nn as nn
@@ -20,7 +20,7 @@ from IPython.display import clear_output
 import plotly.express as px
 
 import kornia
-
+from utils import memo
 from constant import device, ROOT
 
 DTYPE = torch.float16
@@ -225,8 +225,9 @@ class ShadowGenerator:
 
 sg = ShadowGenerator()
 
-def generate_shadow(images, masks):
-    shadow_comp = sg.generate(images, masks)
+@memo
+def generate_shadow(images, masks, rots=None):
+    shadow_comp = sg.generate(images, masks, rots)
     return shadow_comp
 
 

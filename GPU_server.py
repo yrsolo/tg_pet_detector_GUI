@@ -72,15 +72,12 @@ def process():
     if 'image' not in request.files:
         return prepare_response(None, 'Изображение не найдено', 400)
 
+    print(request.form)
 
     image_file = request.files['image']
     image = Image.open(image_file)
 
-    if 'text' not in request.form:
-        params = 'Текст не найден'
-        # return prepare_response(None, 'Текст не найден', 400)
-    else:
-        params = request.form['text']
+    params = request.form
 
     # Здесь может быть ML-обработка
     # Например, обработка изображения (в данном случае просто возвращаем обратно)
@@ -91,4 +88,5 @@ def process():
     return prepare_response(processed_image, text, 200)
 
 if __name__ == "__main__":
+    pass
     app.run(debug=True, host="0.0.0.0", port=9001)

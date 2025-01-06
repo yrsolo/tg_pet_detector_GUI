@@ -6,13 +6,15 @@ import os
 import gradio as gr
 import io
 
+from typing import Dict
+
 import gradio as gr
 from PIL import Image
 import random
 import os
 import sys
 
-
+from utils import memo
 
 import random
 
@@ -24,24 +26,26 @@ PRIVATE_KEY_PATH = '/home/yrsolo/tg-det/https-cert/private_key.pem'
 # Получаем окружение из переменных окружения
 ENV = os.getenv("ENV", "local")  # По умолчанию "local"
 
-
-def prepare_data(image: Image.Image, text: str):
+@memo
+def prepare_data(image: Image.Image, params: Dict):
     """
     Подготавливает данные для отправки через multipart/form-data.
 
     :param image: Объект изображения PIL.Image
-    :param text: Строка текста
+    :param params: Словарь с параметрами
     :return: Словарь с подготовленными данными
     """
     # Преобразуем изображение в байты (JPEG)
     buffered = io.BytesIO()
+
     image.save(buffered, format="JPEG", quality=95)  # Сохраняем изображение в формате JPEG
     image_bytes = buffered.getvalue()  # Получаем байты изображения
 
     # Подготавливаем данные для отправки
-    data = {
-        "text": text,  # Текстовые данные
-    }
+    data = params
+    # data = {
+    #     "text": text,  # Текстовые данные
+    # }
     files = {
         "image": ("image.jpg", image_bytes, "image/jpeg")  # Картинка в формате (имя файла, содержимое, MIME-тип)
     }
@@ -63,7 +67,6 @@ def handle_server_response(response):
     content_type = response.headers['Content-Type']
     boundary = content_type.split("boundary=")[-1]
 
-    # print(response.content)
     # Разбиваем тело ответа по boundary
     parts = response.content.split(f"--{boundary}".encode())
 
@@ -75,8 +78,6 @@ def handle_server_response(response):
         if not part.strip() or part == b"--":
             continue
 
-        # Отделяем заголовки от тела
-        # print('part - >  ', part[:200])
         headers, body = part.split(b"\r\n\r\n", 1)
         headers = headers.decode("utf-8")
 
@@ -93,17 +94,20 @@ def handle_server_response(response):
 
     return processed_images, processed_text
 
-# Заглушка: эмуляция обработки на сервере
-def process_image(image):
-    return image, "Обработка завершена!"
-
-def process_image_server(image):
+@memo
+def process_image_server(image, rot, max_size=1024):
     # Преобразуем изображение в JPEG-формат и отправляем
-    params = ''
+    params = {
+        'rot': rot
+    }
+
+    if image.size[0] > max_size or image.size[1] > max_size:
+        image.thumbnail((max_size, max_size))
+
+
     data, files = prepare_data(image, params)
 
     # Отправляем сжатый JPEG на сервер
-    print(f'send to process image with size {image.size}')
     response = requests.post(
         SERVER_URL,
         data=data,
@@ -136,46 +140,81 @@ with gr.Blocks() as app:
     # Загрузка изображения
     with gr.Row():
         image_input = gr.Image(type="pil", label="Загрузите изображение")
-        # image_input = gr.Video(label="Снимите фото или загрузите видео", sources=["upload", "webcam"])
-
 
     with gr.Row():
+        # Обработать
         process_button = gr.Button("Обработать")
+
+        # Блок для ввода угла
+        # with gr.Row():
+        angle_input = gr.Number(value=0, label="Угол тени (0-359)", visible=False)#, interactive=True)
+
+        # Стрелочки для изменения значения
+        # with gr.Row():
+        decrease_button = gr.Button("-20")
+        increase_button = gr.Button("+20")
+
+        # Галочка для автоматической перегенерации
+        # auto_generate = gr.Checkbox(label="Перегенерировать автоматически при изменении угла")
 
     # Отображение миниатюр и выбор изображения
     with gr.Row():
         thumbnails = gr.Gallery(label="Миниатюры", columns=2, rows=2)
-    selected_index = gr.Number(label="Выберите индекс изображения для просмотра", interactive=True)
-    display_image = gr.Image(label="Выбранное изображение")
+    # selected_index = gr.Number(label="Выберите индекс изображения для просмотра", interactive=True)
+    # display_image = gr.Image(label="Выбранное изображение")
 
     # Перезагрузка приложения
     reload_button = gr.Button("Перезагрузить приложение")
 
-    # Связь между компонентами
-    process_button.click(
-        fn=process_image_server,
-        inputs=image_input,
-        outputs=thumbnails,
-    )
-    thumbnails.select(
-        fn=select_image,
-        inputs=[selected_index, thumbnails],
-        outputs=display_image,
-    )
+
+    def update_angle(current_angle, delta, image_input):
+        # Изменение угла на указанное значение (±20)
+
+        new_angle = (current_angle + delta) % 360
+        angle_input.value = new_angle
+
+        processed_images = process_image(image_input, new_angle)
+
+        return new_angle, processed_images
+
+    def process_image(image, rot):
+        processed_images = process_image_server(image, rot)
+        return processed_images
 
     def reload_app():
         """Перезапуск приложения."""
         python = sys.executable
         os.execl(python, python, *sys.argv)
-        pass
 
-        # return
+    decrease_button.click(
+        fn=update_angle,
+        inputs=[angle_input, gr.State(-20), image_input],
+        outputs=[angle_input,thumbnails],
+    )
+
+    increase_button.click(
+        fn=update_angle,
+        inputs=[angle_input, gr.State(20), image_input],
+        outputs=[angle_input,thumbnails]
+    )
+
+    process_button.click(
+        fn=process_image,
+        inputs=[image_input, angle_input],
+        outputs=thumbnails,
+    )
 
     reload_button.click(
         fn=reload_app,
         inputs=[],
         outputs=[],
     )
+
+    # thumbnails.select(
+    #     fn=lambda idx, thumbs: thumbs[idx],
+    #     inputs=[selected_index, thumbnails],
+    #     outputs=display_image,
+    # )
 
 
 if __name__ == "__main__":

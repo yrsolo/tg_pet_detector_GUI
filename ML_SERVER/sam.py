@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 import torch
 import numpy as np
 import cv2
@@ -18,6 +20,8 @@ from PIL import Image
 import io
 
 from utils import pic2float, pic2int, pic2pil, sigmoid, swimg
+
+from utils import memo
 
 MODEL_NAME = "facebook/sam-vit-large"
 DTYPE = torch.float16
@@ -155,6 +159,7 @@ class Predictor():
 
 sam_predictor = Predictor()
 
+@memo
 def sam_process(image, text=None):
 
     scores, masks = sam_predictor.predict(image)

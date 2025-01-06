@@ -6,6 +6,16 @@ import os
 import gradio as gr
 import io
 
+import gradio as gr
+from PIL import Image
+import random
+import os
+import sys
+
+
+
+import random
+
 SERVER_URL = "http://127.0.0.1:9001/process"
 # Путь к вашим сертификатам (только для сервера)
 CERTIFICATE_PATH = '/home/yrsolo/tg-det/https-cert/certificate.pem'
@@ -25,7 +35,7 @@ def prepare_data(image: Image.Image, text: str):
     """
     # Преобразуем изображение в байты (JPEG)
     buffered = io.BytesIO()
-    image.save(buffered, format="JPEG", quality=85)  # Сохраняем изображение в формате JPEG
+    image.save(buffered, format="JPEG", quality=95)  # Сохраняем изображение в формате JPEG
     image_bytes = buffered.getvalue()  # Получаем байты изображения
 
     # Подготавливаем данные для отправки
@@ -58,7 +68,7 @@ def handle_server_response(response):
     parts = response.content.split(f"--{boundary}".encode())
 
 
-    processed_image = None
+    processed_images = []
     processed_text = None
 
     for part in parts:
@@ -76,12 +86,12 @@ def handle_server_response(response):
 
         # Если это изображение
         elif 'name="image"' in headers:
-            processed_image = Image.open(io.BytesIO(body.strip()))
+            processed_images.append(Image.open(io.BytesIO(body.strip())))
 
-    if processed_image is None or processed_text is None:
+    if processed_images is [] or processed_text is None:
         raise ValueError("Не удалось обработать ответ от сервера")
 
-    return processed_image, processed_text
+    return processed_images, processed_text
 
 # Заглушка: эмуляция обработки на сервере
 def process_image(image):
@@ -102,26 +112,76 @@ def process_image_server(image):
 
     print(response)
 
-    processed_image, text = handle_server_response(response)
-    if response.status_code == 200:
-        return processed_image, "Обработка завершена!" + text
-    else:
-        return image, f"Ошибка при обработке изображения: {response.status_code}"
+    processed_images, text = handle_server_response(response)
 
+    if len(processed_images) < 4:
+        processed_images += processed_images[:1]*(4-len(processed_images))
+
+    if response.status_code == 200:
+        return processed_images #, "Обработка завершена!" + text
+    else:
+        return [image]*4 #, f"Ошибка при обработке изображения: {response.status_code}"
+
+# Функция для выбора крупного изображения
+def select_image(index, images):
+    index = int(index)
+    return images[index][0]
 
 # Интерфейс
-gradio_app = gr.Interface(
-    fn=process_image_server,
-    inputs=gr.Image(type="pil"),
-    outputs=[gr.Image(type="pil"), gr.Textbox()],
-    title="Object Detection App",
-    description="Загрузите изображение для обработки."
-)
+
+with gr.Blocks() as app:
+    gr.Markdown("# Object Detection App")
+    gr.Markdown("Загрузите изображение для обработки. На выходе вы получите 4 варианта, которые можно просмотреть в большом формате.")
+
+    # Загрузка изображения
+    with gr.Row():
+        image_input = gr.Image(type="pil", label="Загрузите изображение")
+        # image_input = gr.Video(label="Снимите фото или загрузите видео", sources=["upload", "webcam"])
+
+
+    with gr.Row():
+        process_button = gr.Button("Обработать")
+
+    # Отображение миниатюр и выбор изображения
+    with gr.Row():
+        thumbnails = gr.Gallery(label="Миниатюры", columns=2, rows=2)
+    selected_index = gr.Number(label="Выберите индекс изображения для просмотра", interactive=True)
+    display_image = gr.Image(label="Выбранное изображение")
+
+    # Перезагрузка приложения
+    reload_button = gr.Button("Перезагрузить приложение")
+
+    # Связь между компонентами
+    process_button.click(
+        fn=process_image_server,
+        inputs=image_input,
+        outputs=thumbnails,
+    )
+    thumbnails.select(
+        fn=select_image,
+        inputs=[selected_index, thumbnails],
+        outputs=display_image,
+    )
+
+    def reload_app():
+        """Перезапуск приложения."""
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+        pass
+
+        # return
+
+    reload_button.click(
+        fn=reload_app,
+        inputs=[],
+        outputs=[],
+    )
+
 
 if __name__ == "__main__":
     if ENV == "production":
         print("Запуск в продакшен среде с SSL...")
-        gradio_app.launch(
+        app.launch(
             server_name="0.0.0.0",  # Домен сервера
             ssl_verify=False,  # Отключаем проверку SSL
             server_port=7860,
@@ -131,7 +191,7 @@ if __name__ == "__main__":
 
     else:
         print("Запуск в локальной среде без SSL...")
-        gradio_app.launch(
+        app.launch(
             server_name="0.0.0.0",
             server_port=7860,
         )

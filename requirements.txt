@@ -18,7 +18,6 @@ flask
 python-dotenv
 uvicorn
 fastapi
-yappa
 paramiko
 transformers
 accelerate
@@ -26,3 +25,6 @@ diffusers
 opencv-python
 matplotlib
 kornia
+seaborn
+bitsandbytes
+plotly

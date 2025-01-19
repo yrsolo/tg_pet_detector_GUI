@@ -1,5 +1,6 @@
-# Shadow Generator
+ <p float="left">  <img src="pic/SDW_GEN.png" width="400" /> </p>
 
+# Shadow Generator
 A **Telegram-based** application that lets you **upload any image**, place it on a **light background**, and add **realistic shadows** (complete with reflections and a custom angle). Perfect for quick prototyping, product image enhancement, or artistic compositions.
 
 ## Demo
@@ -7,7 +8,9 @@ A **Telegram-based** application that lets you **upload any image**, place it on
 Try it out on Telegram:  
 [**SoloStyleBot/app**](https://t.me/SoloStyleBot/app)
 
-> *(Add screenshots or GIFs here to showcase the interface and generated results.)*
+<p float="left">  <img src="pic/app1.jpg" width="200" />  <img src="pic/app2.jpg" width="200" /> </p>
+
+> <p float="left">  <img src="pic/obg1.png" width="200" />  <img src="pic/obg2.png" width="200" /> <img src="pic/obg3.png" width="200" /> <img src="pic/obg4.png" width="200" /></p>
 
 ---
 
@@ -52,3 +55,10 @@ Try it out on Telegram:
 
 ## Training 
 - **Using generative dataset**
+
+Render realistic shadows in 3d software
+<p float="left">
+  <img src="pic/INPUT_COLOR_00000.jpg" width="200" />
+  <img src="pic/INPUT_MASK_00000.jpg" width="200" />  -> 
+  <img src="pic/TARGET_00000.jpg" width="200" />
+</p>

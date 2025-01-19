@@ -134,8 +134,8 @@ def select_image(index, images):
 # Интерфейс
 
 with gr.Blocks() as app:
-    gr.Markdown("# Object Detection App")
-    gr.Markdown("Загрузите изображение для обработки. На выходе вы получите 4 варианта, которые можно просмотреть в большом формате.")
+    gr.Markdown("# Shadow Generator")
+    gr.Markdown("Загрузите изображение для обработки. \nКнопки +/- 20 вращают тень")
 
     # Загрузка изображения
     with gr.Row():

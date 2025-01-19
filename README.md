@@ -11,7 +11,7 @@ Try it out on Telegram:
 <p float="left">  <img src="pic/app1.jpg" width="200" />  <img src="pic/app2.jpg" width="200" /> </p>
 
 > <p float="left">  <img src="pic/obg1.png" width="300" />  <img src="pic/obg2.png" width="300" /></p>
-> <p <img src="pic/obg3.png" width="300" /> <img src="pic/obg4.png" width="300" /></p>
+> <p float="left">  <img src="pic/obg3.png" width="300" /> <img src="pic/obg4.png" width="300" /></p>
 
 ---
 

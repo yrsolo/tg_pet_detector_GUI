@@ -7,7 +7,7 @@ from PIL import Image
 from markdown_it.rules_inline import image
 from seaborn import histplot
 from torchvision.transforms.v2.functional import crop_mask
-from transformers import SamProcessor, SamModel
+from transformers import SamProcessor, SamModel, BitsAndBytesConfig
 from matplotlib import pyplot as plt
 import seaborn as sns
 
@@ -23,7 +23,8 @@ from utils import pic2float, pic2int, pic2pil, sigmoid, swimg
 
 from utils import memo
 
-MODEL_NAME = "facebook/sam-vit-large"
+# MODEL_NAME = "facebook/sam-vit-large"
+MODEL_NAME = 'facebook/sam-vit-base'
 DTYPE = torch.float16
 
 from constant import device
@@ -110,25 +111,46 @@ class Predictor():
     def __init__(self, model=None, processor=None, device=None, model_name=MODEL_NAME, type=DTYPE):
         self.dtype = type
 
+        quant_config = BitsAndBytesConfig(
+            load_in_4bit=True,  # включаем 4-битную квантизацию
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=False,
+            bnb_4bit_quant_type="nf4"  # можно попробовать и другие варианты, например 'fp4'
+        )
+
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
 
         if model is None:
-            model = SamModel.from_pretrained(model_name).to(self.dtype).to(self.device)
+            model = SamModel.from_pretrained(
+                model_name,
+                torch_dtype=self.dtype,
+                quantization_config=quant_config
+            ).to(self.device)
         if processor is None:
             processor = SamProcessor.from_pretrained(MODEL_NAME)
 
         self.model = model.to(self.device)
         self.processor = processor
 
-    def predict(self, image, input_points=None):
+    def predict(self, image, input_points=None, bbox=None):
         image = pic2float(image)
 
-        if input_points is None:
+        if bbox:
+            # bbox = [[int(coord) for coord in bbox]]
+            bbox = [[bbox]]
+            print(bbox)
+            pass
+        elif input_points is None:
+            bbox = None
             input_points = [[[image.shape[1] // 2, image.shape[0] // 2]]]
 
-        inputs = self.processor(image, input_points=input_points, return_tensors="pt", do_rescale=False).to(self.dtype).to("cuda")
+        inputs = self.processor(
+            image,
+            input_points=input_points,
+            input_boxes=bbox,
+            return_tensors="pt", do_rescale=False).to(self.dtype).to("cuda")
 
         with torch.inference_mode():
             outputs = self.model(**inputs)
@@ -160,9 +182,10 @@ class Predictor():
 sam_predictor = Predictor()
 
 @memo
-def sam_process(image, text=None):
+def sam_process(image, text=None, bbox=None):
+    image = pic2float(image)
 
-    scores, masks = sam_predictor.predict(image)
+    scores, masks = sam_predictor.predict(image, bbox=bbox)
     masks = sam_predictor.best_masks(scores, masks, 4)
 
     composes = []
@@ -180,3 +203,12 @@ def sam_process(image, text=None):
         crop_masks.append(mask)
         
     return composes, crop_masks, text
+
+def test_sam():
+    test_image = "../image.jpg"
+    test_image = Image.open(test_image).convert("RGB")
+    test_bbox = [ 5.8209e+01,  2.9224e+01,  2.9198e+02,  1.8345e+02]
+    print(sam_process(test_image, bbox=test_bbox))
+
+if __name__ == "__main__":
+    test_sam()

@@ -56,4 +56,4 @@ def upload_images():
     return redirect(url_for('show_images'))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=9002)
+    app.run(debug=False, port=9002)

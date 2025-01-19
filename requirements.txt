@@ -6,6 +6,9 @@ torchvision
 torchaudio
 --index-url https://download.pytorch.org/whl/cu124
 
+git+https://github.com/IDEA-Research/GroundingDINO.git
+huggingface_hub
+
 
 ipywidgets
 tqdm

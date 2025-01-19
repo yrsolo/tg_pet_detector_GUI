@@ -1,4 +1,6 @@
 from ML_SERVER.sam import sam_process
+from ML_SERVER.blip import describe_center_object
+from ML_SERVER.gdino import detect_objects
 from utils import pic2pil, pic2float
 from PIL import Image
 from SHADOW.pix2pix import generate_shadow
@@ -14,12 +16,17 @@ def process_image(image, params):
     :param text: str, текст
     :return: tuple, объект PIL.Image и текст
     """
-    # Здесь может быть ML-обработка
-    # Например, обработка изображения (в данном случае просто возвращаем обратно)
-
     image = pic2float(image)
 
-    processed_images, mask, text = sam_process(image)
+    # blip
+    description = describe_center_object(image)
+
+    # gdino
+    objects = detect_objects(image, description)
+    bbox = objects['boxes'][0].tolist()
+
+    # sam
+    processed_images, mask, text = sam_process(image, bbox=bbox)
 
     if 'rot' in params:
         rot = int(params['rot'])

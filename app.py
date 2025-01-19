@@ -95,7 +95,7 @@ def handle_server_response(response):
     return processed_images, processed_text
 
 @memo
-def process_image_server(image, rot, max_size=1024):
+def process_image_server(image, rot, max_size=1024, max_pic=2):
     # Преобразуем изображение в JPEG-формат и отправляем
     params = {
         'rot': rot
@@ -118,7 +118,7 @@ def process_image_server(image, rot, max_size=1024):
 
     processed_images, text = handle_server_response(response)
 
-    if len(processed_images) < 4:
+    if len(processed_images) < max_pic:
         processed_images += processed_images[:1]*(4-len(processed_images))
 
     if response.status_code == 200:

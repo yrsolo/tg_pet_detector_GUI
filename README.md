@@ -23,7 +23,7 @@ Try it out on Telegram:
   A **Pix2Pix**-based pipeline adds a natural-looking shadow under the cut-out object, complete with adjustable angle and soft reflections.
 
 - **Lightweight Telegram Interface**  
-  Simply send an image to the bot, optionally adjust the shadow angle, and receive a visually appealing result.
+  Simply send an image to the app, optionally adjust the shadow angle, and receive a visually appealing result.
 
 ---
 

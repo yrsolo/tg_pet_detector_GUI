@@ -4,6 +4,7 @@ uvicorn
 flask
 python-dotenv
 paramiko
+requests
 
 tqdm
 Pillow

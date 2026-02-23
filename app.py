@@ -14,7 +14,7 @@ import random
 import os
 import sys
 
-from utils import memo
+# from utils import memo
 
 import random
 
@@ -31,7 +31,7 @@ PRIVATE_KEY_PATH = '/home/yrsolo/tg-det/https-cert/private_key.pem'
 # Получаем окружение из переменных окружения
 ENV = os.getenv("ENV", "local")  # По умолчанию "local"
 
-@memo
+# @memo
 def prepare_data(image: Image.Image, params: Dict):
     """
     Подготавливает данные для отправки через multipart/form-data.
@@ -118,7 +118,7 @@ def handle_server_response(resp: requests.Response):
     message = data.get("message", "")
     return images, message
 
-@memo
+# @memo
 def process_image_server(image, rot, max_size=1024, max_pic=2):
     # Преобразуем изображение в JPEG-формат и отправляем
     params = {

@@ -1,0 +1,11 @@
+gradio
+fastapi
+uvicorn
+flask
+python-dotenv
+paramiko
+
+tqdm
+Pillow
+numpy
+opencv-python

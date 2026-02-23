@@ -25,8 +25,8 @@ from PIL import Image
 # SERVER_URL = "http://127.0.0.1:9001/process"
 SERVER_URL = "http://127.0.0.1:9001//v1/process"
 # Путь к вашим сертификатам (только для сервера)
-CERTIFICATE_PATH = '/home/yrsolo/tg-det/https-cert/certificate.pem'
-PRIVATE_KEY_PATH = '/home/yrsolo/tg-det/https-cert/private_key.pem'
+CERTIFICATE_PATH = '/opt/shadowgen/https-cert/certificate.pem'
+PRIVATE_KEY_PATH = '/opt/shadowgen/https-cert/private_key.pem'
 
 # Получаем окружение из переменных окружения
 ENV = os.getenv("ENV", "local")  # По умолчанию "local"

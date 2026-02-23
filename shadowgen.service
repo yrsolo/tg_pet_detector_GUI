@@ -1,0 +1,25 @@
+[Unit]
+Description=ShadowGEN demo (Gradio/FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=yrsolo
+WorkingDirectory=/opt/shadowgen
+
+# переменные окружения (оставим твой ENV)
+Environment=ENV=production
+Environment=PYTHONUNBUFFERED=1
+
+# запуск из виртуального окружения БЕЗ source activate
+ExecStart=/opt/shadowgen/.venv/bin/python /opt/shadowgen/app.py
+
+Restart=on-failure
+RestartSec=2
+
+# (опционально) если хочешь писать в файл, раскомментируй:
+# StandardOutput=append:/opt/shadowgen/app.log
+# StandardError=append:/opt/shadowgen/app.log
+
+[Install]
+WantedBy=multi-user.target

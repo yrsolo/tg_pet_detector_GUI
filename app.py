@@ -18,7 +18,12 @@ from utils import memo
 
 import random
 
-SERVER_URL = "http://127.0.0.1:9001/process"
+import base64
+import io
+from PIL import Image
+
+# SERVER_URL = "http://127.0.0.1:9001/process"
+SERVER_URL = "http://127.0.0.1:9001//v1/process"
 # Путь к вашим сертификатам (только для сервера)
 CERTIFICATE_PATH = '/home/yrsolo/tg-det/https-cert/certificate.pem'
 PRIVATE_KEY_PATH = '/home/yrsolo/tg-det/https-cert/private_key.pem'
@@ -52,47 +57,66 @@ def prepare_data(image: Image.Image, params: Dict):
 
     return data, files
 
-def handle_server_response(response):
-    """
-    Обрабатывает multipart/form-data ответ от сервера.
+# def handle_server_response(response):
+#     """
+#     Обрабатывает multipart/form-data ответ от сервера.
 
-    :param response: объект requests.Response, полученный от сервера
-    :return: tuple (PIL.Image, str) — обработанное изображение и текст
-    """
-    # Проверяем успешность запроса
-    if response.status_code != 200:
-        raise ValueError(f"Ошибка запроса: {response.status_code} {response.reason}")
+#     :param response: объект requests.Response, полученный от сервера
+#     :return: tuple (PIL.Image, str) — обработанное изображение и текст
+#     """
+#     # Проверяем успешность запроса
+#     if response.status_code != 200:
+#         raise ValueError(f"Ошибка запроса: {response.status_code} {response.reason}")
 
-    # Получаем boundary из заголовка
-    content_type = response.headers['Content-Type']
-    boundary = content_type.split("boundary=")[-1]
+#     # Получаем boundary из заголовка
+#     content_type = response.headers['Content-Type']
+#     boundary = content_type.split("boundary=")[-1]
 
-    # Разбиваем тело ответа по boundary
-    parts = response.content.split(f"--{boundary}".encode())
+#     # Разбиваем тело ответа по boundary
+#     parts = response.content.split(f"--{boundary}".encode())
 
 
-    processed_images = []
-    processed_text = None
+#     processed_images = []
+#     processed_text = None
 
-    for part in parts:
-        if not part.strip() or part == b"--":
-            continue
+#     for part in parts:
+#         if not part.strip() or part == b"--":
+#             continue
 
-        headers, body = part.split(b"\r\n\r\n", 1)
-        headers = headers.decode("utf-8")
+#         headers, body = part.split(b"\r\n\r\n", 1)
+#         headers = headers.decode("utf-8")
 
-        # Если это текст
-        if 'name="message"' in headers:
-            processed_text = body.decode("utf-8").strip()
+#         # Если это текст
+#         if 'name="message"' in headers:
+#             processed_text = body.decode("utf-8").strip()
 
-        # Если это изображение
-        elif 'name="image"' in headers:
-            processed_images.append(Image.open(io.BytesIO(body.strip())))
+#         # Если это изображение
+#         elif 'name="image"' in headers:
+#             processed_images.append(Image.open(io.BytesIO(body.strip())))
 
-    if processed_images is [] or processed_text is None:
-        raise ValueError("Не удалось обработать ответ от сервера")
+#     if processed_images is [] or processed_text is None:
+#         raise ValueError("Не удалось обработать ответ от сервера")
 
-    return processed_images, processed_text
+#     return processed_images, processed_text
+
+def handle_server_response(resp: requests.Response):
+    # ожидаем JSON
+    data = resp.json()
+
+    if "error" in data:
+        code = data["error"].get("code", "ERROR")
+        msg = data["error"].get("message", "Unknown error")
+        raise RuntimeError(f"{code}: {msg}")
+
+    images = []
+    for item in data.get("images", []):
+        b64 = item["b64"]
+        img_bytes = base64.b64decode(b64)
+        pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        images.append(pil)
+
+    message = data.get("message", "")
+    return images, message
 
 @memo
 def process_image_server(image, rot, max_size=1024, max_pic=2):

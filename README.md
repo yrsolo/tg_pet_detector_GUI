@@ -20,6 +20,7 @@ also you can use the web interface:
 
 ## Features
 
+
 - **Automated Object Detection**  
   Uses **BLIP-2** to describe the main object, **GroundingDINO** to detect bounding boxes, and **BiRefNet** to generate a precise object mask.
 

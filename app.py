@@ -25,57 +25,13 @@ from PIL import Image
 from WEB.ml_api import MLClient, MLResponse
 
 # SERVER_URL = "http://127.0.0.1:9001/process"
-SERVER_URL = "http://127.0.0.1:9001/" #v1/process"
+SERVER_URL = "http://127.0.0.1:9001/"
 # Путь к вашим сертификатам (только для сервера)
 CERTIFICATE_PATH = '/opt/shadowgen/https-cert/certificate.pem'
 PRIVATE_KEY_PATH = '/opt/shadowgen/https-cert/private_key.pem'
 
 # Получаем окружение из переменных окружения
 ENV = os.getenv("ENV", "local")  # По умолчанию "local"
-
-# @memo
-def prepare_data(image: Image.Image, params: Dict):
-    """
-    Подготавливает данные для отправки через multipart/form-data.
-
-    :param image: Объект изображения PIL.Image
-    :param params: Словарь с параметрами
-    :return: Словарь с подготовленными данными
-    """
-    # Преобразуем изображение в байты (JPEG)
-    buffered = io.BytesIO()
-
-    image.save(buffered, format="JPEG", quality=95)  # Сохраняем изображение в формате JPEG
-    image_bytes = buffered.getvalue()  # Получаем байты изображения
-
-    # Подготавливаем данные для отправки
-    data = params
-
-    files = {
-        "image": ("image.jpg", image_bytes, "image/jpeg")  # Картинка в формате (имя файла, содержимое, MIME-тип)
-    }
-
-    return data, files
-
-
-def handle_server_response(resp: requests.Response):
-    # ожидаем JSON
-    data = resp.json()
-
-    if "error" in data:
-        code = data["error"].get("code", "ERROR")
-        msg = data["error"].get("message", "Unknown error")
-        raise RuntimeError(f"{code}: {msg}")
-
-    images = []
-    for item in data.get("images", []):
-        b64 = item["b64"]
-        img_bytes = base64.b64decode(b64)
-        pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-        images.append(pil)
-
-    message = data.get("message", "")
-    return images, message
 
 # @memo
 def process_image_server(image, rot, max_size=1024, max_pic=2):
@@ -94,28 +50,8 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
     except Exception as e:        
         print(f"Ошибка при отправке запроса: {e}")        
 
-    return response.images #, f"Обработка завершена! {response.message}"
+    return response.images 
 
-    #return [image]*4 #, f"Ошибка при отправке запроса: {str(e)}"
-
-    # data, files = prepare_data(image, params)
-    # response = requests.post(
-    #     SERVER_URL,
-    #     data=data,
-    #     files=files
-    # )
-
-    # print(response)
-
-    # processed_images, text = handle_server_response(response)
-
-    # if len(processed_images) < max_pic:
-    #     processed_images += processed_images[:1]*(4-len(processed_images))
-
-    # if response.status_code == 200:
-    #     return processed_images #, "Обработка завершена!" + text
-    # else:
-    #     return [image]*4 #, f"Ошибка при обработке изображения: {response.status_code}"
 
 # Функция для выбора крупного изображения
 def select_image(index, images):

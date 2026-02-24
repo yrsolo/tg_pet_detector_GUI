@@ -1,0 +1,30 @@
+name: Auto-merge dev to master
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]    
+    branches: [dev]
+
+jobs:
+  merge:
+    if: >
+      ${{ github.event.workflow_run.conclusion == 'success'}}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Merge dev into master
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin dev:dev
+          git merge --no-ff dev -m "Auto-merge dev -> master (CI passed)"
+          git push origin master

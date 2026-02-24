@@ -1,6 +1,7 @@
 # contracts.py
 from dataclasses import dataclass
 
+
 @dataclass
 class ShadowParams:
     rot: int = 0
@@ -23,6 +24,7 @@ class ShadowParams:
         """
         Парсит request.form (там всё строки) -> нормальные типы
         """
+
         def to_int(v, default):
             try:
                 return int(v)

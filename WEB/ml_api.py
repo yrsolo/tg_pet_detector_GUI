@@ -1,14 +1,20 @@
-#ml_api.py
-import base64, io, requests
+# ml_api.py
+import base64
+import io
 from dataclasses import dataclass
+
+import requests
 from PIL import Image
+
 from contracts.contracts import ShadowParams
+
 
 @dataclass
 class MLResponse:
     images: list[Image.Image]
     message: str
     meta: dict
+
 
 class MLClient:
     def __init__(self, base_url: str, timeout=(5, 300)):
@@ -31,11 +37,11 @@ class MLClient:
 
         if "error" in data:
             e = data["error"]
-            raise RuntimeError(f'{e.get("code","ERROR")}: {e.get("message","")}')
+            raise RuntimeError(f"{e.get('code', 'ERROR')}: {e.get('message', '')}")
 
         images = []
         for item in data.get("images", []):
             img_bytes = base64.b64decode(item["b64"])
             images.append(Image.open(io.BytesIO(img_bytes)).convert("RGB"))
 
-        return MLResponse(images=images, message=data.get("message",""), meta=data.get("meta", {}))
+        return MLResponse(images=images, message=data.get("message", ""), meta=data.get("meta", {}))

@@ -1,32 +1,15 @@
-from functools import lru_cache
-
-import torch
-import numpy as np
 import cv2
-from PIL import Image
-from markdown_it.rules_inline import image
-from seaborn import histplot
-from torchvision.transforms.v2.functional import crop_mask
-from transformers import SamProcessor, SamModel, BitsAndBytesConfig
-from matplotlib import pyplot as plt
-import seaborn as sns
-
-from IPython.display import display
-from matplotlib import pyplot as plt
-
 import numpy as np
-import requests
+import torch
 from PIL import Image
-import io
-
-from utils import pic2float, pic2int, pic2pil, sigmoid, swimg, mask_crop, memo, center
+from transformers import BitsAndBytesConfig, SamModel, SamProcessor
 
 from constant import device
+from utils.utils import center, mask_crop, memo, pic2float, sigmoid
 
 # MODEL_NAME = "facebook/sam-vit-large"
-MODEL_NAME = 'facebook/sam-vit-base'
+MODEL_NAME = "facebook/sam-vit-base"
 DTYPE = torch.float16
-
 
 
 def advanced_mask(logits, threshold=0.5, sigma=5, alpha=10):
@@ -40,8 +23,8 @@ def advanced_mask(logits, threshold=0.5, sigma=5, alpha=10):
     :return: Маска с плавными границами (numpy массив)
     """
     # 1. Бинаризация логитов
-    sigmoid = 1 / (1 + np.exp(-logits))  # Преобразуем логиты в вероятности
-    binary_mask = (sigmoid >= threshold).astype(np.float32)  # Бинарная маска
+    # sigmoid = 1 / (1 + np.exp(-logits))  # Преобразуем логиты в вероятности
+    binary_mask = (sigmoid(logits) >= threshold).astype(np.float32)  # Бинарная маска
 
     # 2. Размытие бинарной маски для выделения границ
     blurred_binary = cv2.GaussianBlur(binary_mask, (0, 0), sigma)
@@ -68,26 +51,24 @@ def advanced_mask(logits, threshold=0.5, sigma=5, alpha=10):
     return final_mask
 
 
-class SAM_Predictor():
-    def __init__(self, model=None, processor=None, device=None, model_name=MODEL_NAME, type=DTYPE):
+class SAM_Predictor:
+    def __init__(
+        self, model=None, processor=None, device=device, model_name=MODEL_NAME, type=DTYPE
+    ):
         self.dtype = type
 
         quant_config = BitsAndBytesConfig(
             load_in_4bit=True,  # включаем 4-битную квантизацию
             bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=False,
-            bnb_4bit_quant_type="nf4"  # можно попробовать и другие варианты, например 'fp4'
+            bnb_4bit_quant_type="nf4",  # можно попробовать и другие варианты, например 'fp4'
         )
 
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
 
         if model is None:
             model = SamModel.from_pretrained(
-                model_name,
-                torch_dtype=self.dtype,
-                quantization_config=quant_config
+                model_name, torch_dtype=self.dtype, quantization_config=quant_config
             ).to(self.device)
         if processor is None:
             processor = SamProcessor.from_pretrained(MODEL_NAME)
@@ -107,22 +88,33 @@ class SAM_Predictor():
             bbox = None
             input_points = [[[image.shape[1] // 2, image.shape[0] // 2]]]
 
-        inputs = self.processor(
-            image,
-            input_points=input_points,
-            input_boxes=bbox,
-            return_tensors="pt", do_rescale=False).to(self.dtype).to("cuda")
+        inputs = (
+            self.processor(
+                image,
+                input_points=input_points,
+                input_boxes=bbox,
+                return_tensors="pt",
+                do_rescale=False,
+            )
+            .to(self.dtype)
+            .to("cuda")
+        )
 
         with torch.inference_mode():
             outputs = self.model(**inputs)
 
-        scores = outputs.iou_scores[0][0].cpu().detach().numpy().astype('float')
-        masks = self.processor.image_processor.post_process_masks(
-            outputs.pred_masks.cpu(),
-            inputs["original_sizes"].cpu(),
-            inputs["reshaped_input_sizes"].cpu(),
-            binarize=False
-        )[0][0].cpu().numpy().astype('float')
+        scores = outputs.iou_scores[0][0].cpu().detach().numpy().astype("float")
+        masks = (
+            self.processor.image_processor.post_process_masks(
+                outputs.pred_masks.cpu(),
+                inputs["original_sizes"].cpu(),
+                inputs["reshaped_input_sizes"].cpu(),
+                binarize=False,
+            )[0][0]
+            .cpu()
+            .numpy()
+            .astype("float")
+        )
 
         return scores, masks
 
@@ -133,7 +125,7 @@ class SAM_Predictor():
         best_masks_indexex = np.argsort(scores)[::-1][:n]
 
         for idx in best_masks_indexex:
-            mask, score = masks[idx], scores[idx]
+            mask, _ = masks[idx], scores[idx]
             mask = advanced_mask(mask)
             mask = np.stack([mask, mask, mask], axis=-1)
             best_masks.append(mask)
@@ -141,6 +133,7 @@ class SAM_Predictor():
 
 
 sam_predictor = SAM_Predictor()
+
 
 @memo
 def sam_process(image, text=None, bbox=None):
@@ -162,14 +155,16 @@ def sam_process(image, text=None, bbox=None):
 
         composes.append(compose)
         crop_masks.append(mask)
-        
+
     return composes, crop_masks, text
+
 
 def test():
     test_image = "../image.jpg"
     test_image = Image.open(test_image).convert("RGB")
-    test_bbox = [ 5.8209e+01,  2.9224e+01,  2.9198e+02,  1.8345e+02]
+    test_bbox = [5.8209e01, 2.9224e01, 2.9198e02, 1.8345e02]
     print(sam_process(test_image, bbox=test_bbox))
+
 
 if __name__ == "__main__":
     test()

@@ -1,42 +1,20 @@
-import pandas as pd
-from seaborn import histplot
-
-from ML_SERVER.birefnet import biref_process
-from utils import pic2float, pic2int, pic2pil, sigmoid, swimg, mask_crop, memo, center, memo
+import os
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torchvision import transforms as tt
-from torchvision.transforms import v2
-from torchvision.transforms import functional as tf
+from PIL import Image
 
 # dataset
-from torch.utils.data import Dataset, DataLoader
-from PIL import Image
-import os
-
-import cv2
-
-import numpy as np
-from IPython.display import clear_output
-
-import plotly.express as px
-
-import kornia
-from constant import device, ROOT
+from constant import ROOT, device
+from ML_SERVER.birefnet import biref_process
+from utils.utils import center, memo, pic2float, pic2pil, swimg
 
 DTYPE = torch.float16
 
-MODEL = 'SHADOW/models/Generator.pth'
-AV_MODEL = 'SHADOW/models/AveragedModel.pth'
+MODEL = "SHADOW/models/Generator.pth"
+AV_MODEL = "SHADOW/models/AveragedModel.pth"
 
 USE_AVERAGE = True
-
-from ML_SERVER.sam import sam_process
-
-from constant import device, ROOT
 
 
 def add_mask(x, mask):
@@ -110,7 +88,7 @@ class Generator(nn.Module):
         self.dec3 = Block(256 * 2, 128)
         self.dec2 = Block(128 * 2, 64)
         self.dec1 = Block(64 * 2, 3, norm=False, relu=False)
-        self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+        self.upsample = nn.Upsample(scale_factor=2, mode="bilinear", align_corners=True)
 
     def forward(self, x):
         # Кодировка
@@ -191,7 +169,9 @@ class ShadowGenerator:
         if generator is None:
             generator = Generator()
             if avarage:
-                generator = torch.optim.swa_utils.AveragedModel(generator, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999))
+                generator = torch.optim.swa_utils.AveragedModel(
+                    generator, multi_avg_fn=torch.optim.swa_utils.get_ema_multi_avg_fn(0.999)
+                )
                 model_path = AV_MODEL
             else:
                 model_path = MODEL
@@ -202,7 +182,12 @@ class ShadowGenerator:
         self.generator = generator
         self.device = device
 
-    def generate(self, colors, masks, rots=None,):
+    def generate(
+        self,
+        colors,
+        masks,
+        rots=None,
+    ):
 
         if not isinstance(colors, list):
             colors = [colors]
@@ -211,7 +196,7 @@ class ShadowGenerator:
         colors = torch.stack([torch.tensor(i).permute(2, 0, 1) for i in colors])
         masks = 1 - torch.stack([torch.tensor(i).permute(2, 0, 1) for i in masks])
         white = torch.ones_like(colors)
-        colors_on_white = white * masks + colors * (1-masks)
+        colors_on_white = white * masks + colors * (1 - masks)
 
         if rots is None:
             rotate_angle = torch.randint(0, 359, (1,)).item()
@@ -234,9 +219,11 @@ class ShadowGenerator:
 
         return shadow_comp
 
-print('Loading Shadow model...')
+
+print("Loading Shadow model...")
 sg = ShadowGenerator()
-print('Shadow model loaded')
+print("Shadow model loaded")
+
 
 @memo
 def generate_shadow(images, masks, rots=None):
@@ -261,6 +248,6 @@ def test():
 
     # swimg([*images, *masks, *shadow_comp])
 
-if __name__ == '__main__':
-    test()
 
+if __name__ == "__main__":
+    test()

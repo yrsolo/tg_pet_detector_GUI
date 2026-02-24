@@ -1,65 +1,51 @@
-import requests
-from PIL import Image
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
-import os
-import gradio as gr
-import io
+"""Web interface for the Shadow Generator application using Gradio.
+Allows users to upload images, adjust shadow parameters, and view processed results.
+Supports both local and production environments with optional SSL configuration."""
 
-from typing import Dict
-
-import gradio as gr
-from PIL import Image
-import random
+# from utils import memo
 import os
 import sys
 
-# from utils import memo
+import gradio as gr
 
-import random
-
-import base64
-import io
-from PIL import Image
-
-from WEB.ml_api import MLClient, MLResponse
 from contracts.contracts import ShadowParams
+from WEB.ml_api import MLClient
 
-# SERVER_URL = "http://127.0.0.1:9001/process"
 SERVER_URL = "http://127.0.0.1:9001/"
+
 # Путь к вашим сертификатам (только для сервера)
-CERTIFICATE_PATH = '/opt/shadowgen/https-cert/certificate.pem'
-PRIVATE_KEY_PATH = '/opt/shadowgen/https-cert/private_key.pem'
+CERTIFICATE_PATH = "/opt/shadowgen/https-cert/certificate.pem"
+PRIVATE_KEY_PATH = "/opt/shadowgen/https-cert/private_key.pem"
 
 # Получаем окружение из переменных окружения
 ENV = os.getenv("ENV", "local")  # По умолчанию "local"
 
+
 # @memo
 def process_image_server(image, rot, max_size=1024, max_pic=2):
-    # Преобразуем изображение в JPEG-формат и отправляем
-    params = {
-        'rot': rot
-    }
+    """Sends the image and rotation parameter to the ML server and returns processed images."""
+    params = {"rot": rot}
 
     if image.size[0] > max_size or image.size[1] > max_size:
         image.thumbnail((max_size, max_size))
-
 
     client = MLClient(SERVER_URL)
     params = ShadowParams(rot=rot, max_objects=4, return_debug=False)
 
     try:
         response = client.process(image, params)
-    except Exception as e:        
-        print(f"Ошибка при отправке запроса: {e}")        
+    except Exception as e:
+        print(f"Ошибка при отправке запроса: {e}")
 
-    return response.images 
+    return response.images
 
 
 # Функция для выбора крупного изображения
 def select_image(index, images):
+    """Selects the image at the specified index from the list of images."""
     index = int(index)
     return images[index][0]
+
 
 # Интерфейс
 
@@ -76,56 +62,53 @@ with gr.Blocks() as app:
         process_button = gr.Button("Обработать")
 
         # Блок для ввода угла
-        # with gr.Row():
-        angle_input = gr.Number(value=0, label="Угол тени (0-359)", visible=False)#, interactive=True)
+        angle_input = gr.Number(
+            value=0, label="Угол тени (0-359)", visible=False
+        )  # , interactive=True)
 
         # Стрелочки для изменения значения
-        # with gr.Row():
         decrease_button = gr.Button("-20")
         increase_button = gr.Button("+20")
-
-        # Галочка для автоматической перегенерации
-        # auto_generate = gr.Checkbox(label="Перегенерировать автоматически при изменении угла")
 
     # Отображение миниатюр и выбор изображения
     with gr.Row():
         thumbnails = gr.Gallery(label="Миниатюры", columns=2, rows=2)
-    # selected_index = gr.Number(label="Выберите индекс изображения для просмотра", interactive=True)
-    # display_image = gr.Image(label="Выбранное изображение")
 
     # Перезагрузка приложения
     reload_button = gr.Button("Перезагрузить приложение")
 
-
-    def update_angle(current_angle, delta, image_input):
-        # Изменение угла на указанное значение (±20)
+    def update_angle(current_angle, delta, image):
+        """Angle update function that modifies the current angle
+        and processes the image with the new angle."""
 
         new_angle = (current_angle + delta) % 360
         angle_input.value = new_angle
 
-        processed_images = process_image(image_input, new_angle)
+        processed_images = process_image(image, new_angle)
 
         return new_angle, processed_images
 
     def process_image(image, rot):
+        """Sends the image and rotation parameter to the ML server and returns processed images."""
         processed_images = process_image_server(image, rot)
         return processed_images
 
     def reload_app():
-        """Перезапуск приложения."""
+        """Reload the application by restarting the Python process.
+        This is useful for applying updates or clearing the state."""
         python = sys.executable
         os.execl(python, python, *sys.argv)
 
     decrease_button.click(
         fn=update_angle,
         inputs=[angle_input, gr.State(-20), image_input],
-        outputs=[angle_input,thumbnails],
+        outputs=[angle_input, thumbnails],
     )
 
     increase_button.click(
         fn=update_angle,
         inputs=[angle_input, gr.State(20), image_input],
-        outputs=[angle_input,thumbnails]
+        outputs=[angle_input, thumbnails],
     )
 
     process_button.click(
@@ -164,4 +147,3 @@ if __name__ == "__main__":
             server_name="0.0.0.0",
             server_port=7860,
         )
-

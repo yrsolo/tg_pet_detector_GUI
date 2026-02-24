@@ -1,11 +1,13 @@
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import os
 import signal
-import time
 import subprocess
+import time
 
-APP_PORT=7860
+from watchdog.events import FileSystemEventHandler  # type: ignore
+from watchdog.observers import Observer  # type: ignore
+
+APP_PORT = 7860
+
 
 def kill_port(port):
     try:
@@ -18,6 +20,7 @@ def kill_port(port):
     except Exception as e:
         print(f"Ошибка при завершении процесса на порту {port}: {e}")
 
+
 class RestartHandler(FileSystemEventHandler):
     def __init__(self, process, port=APP_PORT, watch_dir="."):
         self.process = process
@@ -26,7 +29,11 @@ class RestartHandler(FileSystemEventHandler):
         self.last_modified = None
 
     def on_modified(self, event):
-        if not event.is_directory and os.path.dirname(event.src_path) == self.watch_dir and event.src_path.endswith(".py"):  # Отслеживаем только изменения в Python-файлах
+        if (
+            not event.is_directory
+            and os.path.dirname(event.src_path) == self.watch_dir
+            and event.src_path.endswith(".py")
+        ):  # Отслеживаем только изменения в Python-файлах
             current_time = time.time()
             if self.last_modified is None or current_time - self.last_modified > 1:
                 print(f"Изменения в {event.src_path}. Перезапуск...")
@@ -41,7 +48,9 @@ if __name__ == "__main__":
     watch_dir = os.getcwd()
     event_handler = RestartHandler(process, APP_PORT, watch_dir)
     observer = Observer()
-    observer.schedule(event_handler, path=watch_dir, recursive=False)  # Отслеживание текущей директории
+    observer.schedule(
+        event_handler, path=watch_dir, recursive=False
+    )  # Отслеживание текущей директории
     observer.start()
 
     try:

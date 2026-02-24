@@ -1,8 +1,7 @@
-from collections import deque
-
-from flask import Flask, request, render_template_string, redirect, url_for
 import base64
 from collections import deque
+
+from flask import Flask, redirect, render_template_string, request, url_for
 
 app = Flask(__name__)
 
@@ -36,24 +35,27 @@ HTML_TEMPLATE = """
 </html>
 """
 
-@app.route('/', methods=['GET'])
+
+@app.route("/", methods=["GET"])
 def show_images():
     return render_template_string(HTML_TEMPLATE, images=received_images)
 
-@app.route('/upload', methods=['POST'])
+
+@app.route("/upload", methods=["POST"])
 def upload_images():
     global received_images
 
     # Получаем изображения из POST-запроса
-    files = request.files.getlist('images')
+    files = request.files.getlist("images")
     for file in files:
         # Читаем файл и кодируем в base64
         image_data = file.read()
-        encoded_image = base64.b64encode(image_data).decode('utf-8')
+        encoded_image = base64.b64encode(image_data).decode("utf-8")
         received_images.appendleft(encoded_image)
 
     # Перенаправляем обратно на главную страницу для отображения новых изображений
-    return redirect(url_for('show_images'))
+    return redirect(url_for("show_images"))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app.run(debug=False, port=9002)

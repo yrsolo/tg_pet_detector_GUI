@@ -1,19 +1,22 @@
+"""Утилиты для обработки изображений и взаимодействия с сервером.
+Содержит функции для деоконтаминации изображений, преобразования форматов, отправки изображений на сервер и другие вспомогательные функции."""
+
 import io
-import typing
-import requests
-
-import numpy as np
-import torch
-
-
-from PIL import Image
-import cv2
-
-from constant import device, MAX_MAMO_SIZE
 import time
+import typing
+
+import cv2
+import numpy as np
+import requests
+import torch
+from PIL import Image
+
+from constant import MAX_MAMO_SIZE, device
+
 
 def memo(func):
     m = {}
+
     def wrapper(*arg, **kwarg):
         if len(m) > MAX_MAMO_SIZE:
             m.clear()
@@ -24,12 +27,17 @@ def memo(func):
 
     return wrapper
 
+
 def timer(start=None, text=None):
     # return start time in start is none
     # return length in sec if start is not None
     if start is None:
         return time.time()
-    print(f'{text}: {time.time() - start:.2f} sec')
+    print(f"{text}: {time.time() - start:.2f} sec")
+
+
+a = 1 + "2"
+
 
 @memo
 def decontaminate(im, mask, steps=15, blur=9):
@@ -38,7 +46,7 @@ def decontaminate(im, mask, steps=15, blur=9):
         return [decontaminate(i, m, steps, blur) for i, m in zip(im, mask)]
 
     # приводим к float [0,1] и нужным формам
-    im = pic2float(im)      # твоя функция, оставляем
+    im = pic2float(im)  # твоя функция, оставляем
     mask = pic2float(mask)
 
     # маска Photoroom ожидается однослойная (H, W) в [0,1]
@@ -71,11 +79,11 @@ def decontaminate(im, mask, steps=15, blur=9):
 
     return im_un
 
+
 def FB_blur_fusion_foreground_estimator_pil_2(image, alpha, r1=90, r2=6):
     # Thanks to the source: https://github.com/Photoroom/fast-foreground-estimation
     alpha = alpha[:, :, None]
-    F, blur_B = FB_blur_fusion_foreground_estimator_pil(
-        image, image, image, alpha, r=r1)
+    F, blur_B = FB_blur_fusion_foreground_estimator_pil(image, image, image, alpha, r=r1)
     return FB_blur_fusion_foreground_estimator_pil(image, F, blur_B, alpha, r=r2)[0]
 
 
@@ -92,6 +100,7 @@ def FB_blur_fusion_foreground_estimator_pil(image, F, B, alpha, r=90):
     F = blurred_F + alpha * (image - alpha * blurred_F - (1 - alpha) * blurred_B)
     F = np.clip(F, 0, 1)
     return F, blurred_B
+
 
 @memo
 def decontaminate_old(im, mask, steps=15, blur=9):
@@ -141,7 +150,6 @@ def mask_blur(im, m, b=3):
     return im
 
 
-
 def pic2int(image):
     if isinstance(image, torch.Tensor):
         image = image.cpu().detach().numpy()
@@ -161,7 +169,7 @@ def pic2int(image):
     if pic_max <= 1:
         image = image * 255
 
-    return image.astype('uint8')
+    return image.astype("uint8")
 
 
 def pic2float(image):
@@ -181,7 +189,7 @@ def pic2float(image):
     elif pic_max > 1:
         image = image / 255
     else:
-        image = image.astype('float32')
+        image = image.astype("float32")
 
     return image
 
@@ -194,6 +202,7 @@ def pic2pil(image):
         image = pic2int(image)
         image = Image.fromarray(image)
     return image
+
 
 def pic2tensor(image):
     image = pic2float(image)
@@ -230,10 +239,10 @@ def swimg(image_arrays, server_url="http://127.0.0.1:9002/upload"):
         buffer.seek(0)
 
         # Добавляем изображение в список файлов
-        files.append(('images', (f'image_{idx}.png', buffer, 'image/png')))
+        files.append(("images", (f"image_{idx}.png", buffer, "image/png")))
 
     # Отправляем POST-запрос с изображениями
-    response = requests.post(server_url, files=files)
+    _ = requests.post(server_url, files=files)
 
     # Проверяем статус
     # if response.status_code == 200:
@@ -244,7 +253,6 @@ def swimg(image_arrays, server_url="http://127.0.0.1:9002/upload"):
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
-
 
 
 def hash_image(image):
@@ -292,14 +300,11 @@ def center(image, mask, shape=(512, 512), boudary=0.2):
     obj_h, obj_w, _ = image.shape
     scale = min(bh / obj_h, bw / obj_w)
     new_h, new_w = int(obj_h * scale), int(obj_w * scale)
-    # display(pic2pil(image))
     if scale < 1:
         algo = cv2.INTER_AREA
     else:
         algo = cv2.INTER_AREA
         algo = cv2.INTER_LINEAR
-        # algo = cv2.INTER_CUBIC
-        # algo = cv2.INTER_LANCZOS4
 
     image = cv2.resize(image, (new_w, new_h), interpolation=algo)
 
@@ -309,12 +314,9 @@ def center(image, mask, shape=(512, 512), boudary=0.2):
     left = (w - new_w) // 2
 
     new_mask = np.zeros((h, w, 3), dtype=np.float32)
-    new_mask[top:top + new_h, left:left + new_w] = mask
+    new_mask[top : top + new_h, left : left + new_w] = mask
     #
     new_image = np.ones((h, w, 3), dtype=np.float32)
-    new_image[top:top + new_h, left:left + new_w] = image
-
-    # bg = np.ones((h, w, 3), dtype=np.float32)
-    # new_image = new_image * new_mask + bg * (1 - new_mask)
+    new_image[top : top + new_h, left : left + new_w] = image
 
     return new_image, new_mask

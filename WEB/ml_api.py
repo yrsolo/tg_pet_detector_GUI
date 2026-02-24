@@ -2,7 +2,7 @@
 import base64, io, requests
 from dataclasses import dataclass
 from PIL import Image
-from utils.contracts import ShadowParams
+from contracts.contracts import ShadowParams
 
 @dataclass
 class MLResponse:

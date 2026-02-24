@@ -11,7 +11,7 @@ import time
 from PIL import Image
 from flask import Flask, request, jsonify
 
-from utils.contracts import ShadowParams
+from contracts.contracts import ShadowParams
 
 app = Flask(__name__)
 

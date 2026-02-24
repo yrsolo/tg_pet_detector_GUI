@@ -23,7 +23,7 @@ import io
 from PIL import Image
 
 from WEB.ml_api import MLClient, MLResponse
-from utils.contracts import ShadowParams
+from contracts.contracts import ShadowParams
 
 # SERVER_URL = "http://127.0.0.1:9001/process"
 SERVER_URL = "http://127.0.0.1:9001/"

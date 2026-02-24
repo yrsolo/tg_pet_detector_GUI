@@ -4,7 +4,7 @@ from PIL import Image
 from torchvision import transforms
 from transformers import AutoModelForImageSegmentation, BitsAndBytesConfig
 
-from utils import memo, pic2float
+from utils.utils import memo, pic2float
 
 MODEL_NAME = "ZhengPeng7/BiRefNet"
 DTYPE = torch.float16

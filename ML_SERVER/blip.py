@@ -2,7 +2,7 @@ import torch
 from PIL import Image
 from transformers import BitsAndBytesConfig, Blip2ForConditionalGeneration, Blip2Processor
 
-from utils import device, memo, pic2float
+from utils.utils import device, memo, pic2float
 
 BLIP = "Salesforce/blip2-opt-2.7b"
 BLIP_PROMPT = "Question: Describe the main (central) object in this image. Answer:"

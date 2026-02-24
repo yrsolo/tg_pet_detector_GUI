@@ -9,7 +9,7 @@ Try it out on Telegram:
 [**SoloStyleBot/app**](https://t.me/SoloStyleBot/app)
 
 also you can use the web interface:  
-[**SoloStyleBot/web**](https://style-app.solofarm.ru:7860)
+[**SoloStyleBot/web**](https://style-app.solofarm.ru)
 
 <p float="left">  <img src="pic/app1.jpg" width="200" />  <img src="pic/app2.jpg" width="200" /> </p>
 

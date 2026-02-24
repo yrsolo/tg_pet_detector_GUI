@@ -36,9 +36,6 @@ def timer(start=None, text=None):
     print(f"{text}: {time.time() - start:.2f} sec")
 
 
-a = 1 + "2"
-
-
 @memo
 def decontaminate(im, mask, steps=15, blur=9):
 

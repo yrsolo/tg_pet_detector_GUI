@@ -94,7 +94,10 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
         response = client.process(image, params)
     except Exception as e:        
         print(f"Ошибка при отправке запроса: {e}")        
-    return [image]*4 #, f"Ошибка при отправке запроса: {str(e)}"
+
+    return response.images #, f"Обработка завершена! {response.message}"
+
+    #return [image]*4 #, f"Ошибка при отправке запроса: {str(e)}"
 
     # data, files = prepare_data(image, params)
     # response = requests.post(

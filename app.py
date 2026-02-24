@@ -22,6 +22,8 @@ import base64
 import io
 from PIL import Image
 
+from WEB.ml_api import MLClient, MLResponse
+
 # SERVER_URL = "http://127.0.0.1:9001/process"
 SERVER_URL = "http://127.0.0.1:9001//v1/process"
 # Путь к вашим сертификатам (только для сервера)
@@ -132,23 +134,31 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
     data, files = prepare_data(image, params)
 
     # Отправляем сжатый JPEG на сервер
-    response = requests.post(
-        SERVER_URL,
-        data=data,
-        files=files
-    )
 
-    print(response)
+    client = MLClient(SERVER_URL)
+    try:        
+        response = client.process(image, params)
+    except Exception as e:        
+        print(f"Ошибка при отправке запроса: {e}")        
+    return [image]*4 #, f"Ошибка при отправке запроса: {str(e)}"
 
-    processed_images, text = handle_server_response(response)
+    # response = requests.post(
+    #     SERVER_URL,
+    #     data=data,
+    #     files=files
+    # )
 
-    if len(processed_images) < max_pic:
-        processed_images += processed_images[:1]*(4-len(processed_images))
+    # print(response)
 
-    if response.status_code == 200:
-        return processed_images #, "Обработка завершена!" + text
-    else:
-        return [image]*4 #, f"Ошибка при обработке изображения: {response.status_code}"
+    # processed_images, text = handle_server_response(response)
+
+    # if len(processed_images) < max_pic:
+    #     processed_images += processed_images[:1]*(4-len(processed_images))
+
+    # if response.status_code == 200:
+    #     return processed_images #, "Обработка завершена!" + text
+    # else:
+    #     return [image]*4 #, f"Ошибка при обработке изображения: {response.status_code}"
 
 # Функция для выбора крупного изображения
 def select_image(index, images):

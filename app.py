@@ -50,56 +50,13 @@ def prepare_data(image: Image.Image, params: Dict):
 
     # Подготавливаем данные для отправки
     data = params
-    # data = {
-    #     "text": text,  # Текстовые данные
-    # }
+
     files = {
         "image": ("image.jpg", image_bytes, "image/jpeg")  # Картинка в формате (имя файла, содержимое, MIME-тип)
     }
 
     return data, files
 
-# def handle_server_response(response):
-#     """
-#     Обрабатывает multipart/form-data ответ от сервера.
-
-#     :param response: объект requests.Response, полученный от сервера
-#     :return: tuple (PIL.Image, str) — обработанное изображение и текст
-#     """
-#     # Проверяем успешность запроса
-#     if response.status_code != 200:
-#         raise ValueError(f"Ошибка запроса: {response.status_code} {response.reason}")
-
-#     # Получаем boundary из заголовка
-#     content_type = response.headers['Content-Type']
-#     boundary = content_type.split("boundary=")[-1]
-
-#     # Разбиваем тело ответа по boundary
-#     parts = response.content.split(f"--{boundary}".encode())
-
-
-#     processed_images = []
-#     processed_text = None
-
-#     for part in parts:
-#         if not part.strip() or part == b"--":
-#             continue
-
-#         headers, body = part.split(b"\r\n\r\n", 1)
-#         headers = headers.decode("utf-8")
-
-#         # Если это текст
-#         if 'name="message"' in headers:
-#             processed_text = body.decode("utf-8").strip()
-
-#         # Если это изображение
-#         elif 'name="image"' in headers:
-#             processed_images.append(Image.open(io.BytesIO(body.strip())))
-
-#     if processed_images is [] or processed_text is None:
-#         raise ValueError("Не удалось обработать ответ от сервера")
-
-#     return processed_images, processed_text
 
 def handle_server_response(resp: requests.Response):
     # ожидаем JSON
@@ -131,34 +88,32 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
         image.thumbnail((max_size, max_size))
 
 
-    data, files = prepare_data(image, params)
 
-    # Отправляем сжатый JPEG на сервер
+    client = MLClient(SERVER_URL)
+    try:
+        response = client.process(image, params)
+    except Exception as e:        
+        print(f"Ошибка при отправке запроса: {e}")        
+    return [image]*4 #, f"Ошибка при отправке запроса: {str(e)}"
 
-    # client = MLClient(SERVER_URL)
-    # try:
-    #     response = client.process(image, params)
-    # except Exception as e:        
-    #     print(f"Ошибка при отправке запроса: {e}")        
-    # return [image]*4 #, f"Ошибка при отправке запроса: {str(e)}"
+    # data, files = prepare_data(image, params)
+    # response = requests.post(
+    #     SERVER_URL,
+    #     data=data,
+    #     files=files
+    # )
 
-    response = requests.post(
-        SERVER_URL,
-        data=data,
-        files=files
-    )
+    # print(response)
 
-    print(response)
+    # processed_images, text = handle_server_response(response)
 
-    processed_images, text = handle_server_response(response)
+    # if len(processed_images) < max_pic:
+    #     processed_images += processed_images[:1]*(4-len(processed_images))
 
-    if len(processed_images) < max_pic:
-        processed_images += processed_images[:1]*(4-len(processed_images))
-
-    if response.status_code == 200:
-        return processed_images #, "Обработка завершена!" + text
-    else:
-        return [image]*4 #, f"Ошибка при обработке изображения: {response.status_code}"
+    # if response.status_code == 200:
+    #     return processed_images #, "Обработка завершена!" + text
+    # else:
+    #     return [image]*4 #, f"Ошибка при обработке изображения: {response.status_code}"
 
 # Функция для выбора крупного изображения
 def select_image(index, images):

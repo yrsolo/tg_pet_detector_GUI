@@ -25,7 +25,7 @@ from PIL import Image
 from WEB.ml_api import MLClient, MLResponse
 
 # SERVER_URL = "http://127.0.0.1:9001/process"
-SERVER_URL = "http://127.0.0.1:9001//v1/process"
+SERVER_URL = "http://127.0.0.1:9001/" #v1/process"
 # Путь к вашим сертификатам (только для сервера)
 CERTIFICATE_PATH = '/opt/shadowgen/https-cert/certificate.pem'
 PRIVATE_KEY_PATH = '/opt/shadowgen/https-cert/private_key.pem'
@@ -86,7 +86,6 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
 
     if image.size[0] > max_size or image.size[1] > max_size:
         image.thumbnail((max_size, max_size))
-
 
 
     client = MLClient(SERVER_URL)

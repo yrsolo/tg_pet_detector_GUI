@@ -10,3 +10,7 @@ tqdm
 Pillow
 numpy
 opencv-python
+
+redis 
+boto3 
+python-dotenv

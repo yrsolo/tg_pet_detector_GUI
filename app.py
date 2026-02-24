@@ -133,12 +133,16 @@ with gr.Blocks() as app:
 if __name__ == "__main__":
     if ENV == "production":
         print("Запуск в продакшен среде с SSL...")
+        # app.launch(
+        #     server_name="0.0.0.0",  # Домен сервера
+        #     ssl_verify=False,  # Отключаем проверку SSL
+        #     server_port=7860,
+        #     ssl_keyfile=PRIVATE_KEY_PATH,  # Приватный ключ
+        #     ssl_certfile=CERTIFICATE_PATH,  # Сертификат
+        # )
         app.launch(
-            server_name="0.0.0.0",  # Домен сервера
-            ssl_verify=False,  # Отключаем проверку SSL
+            server_name="127.0.0.1",  # Домен сервера
             server_port=7860,
-            ssl_keyfile=PRIVATE_KEY_PATH,  # Приватный ключ
-            ssl_certfile=CERTIFICATE_PATH,  # Сертификат
         )
 
     else:

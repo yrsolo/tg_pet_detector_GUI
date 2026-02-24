@@ -135,30 +135,30 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
 
     # Отправляем сжатый JPEG на сервер
 
-    client = MLClient(SERVER_URL)
-    try:        
-        response = client.process(image, params)
-    except Exception as e:        
-        print(f"Ошибка при отправке запроса: {e}")        
-    return [image]*4 #, f"Ошибка при отправке запроса: {str(e)}"
+    # client = MLClient(SERVER_URL)
+    # try:
+    #     response = client.process(image, params)
+    # except Exception as e:        
+    #     print(f"Ошибка при отправке запроса: {e}")        
+    # return [image]*4 #, f"Ошибка при отправке запроса: {str(e)}"
 
-    # response = requests.post(
-    #     SERVER_URL,
-    #     data=data,
-    #     files=files
-    # )
+    response = requests.post(
+        SERVER_URL,
+        data=data,
+        files=files
+    )
 
-    # print(response)
+    print(response)
 
-    # processed_images, text = handle_server_response(response)
+    processed_images, text = handle_server_response(response)
 
-    # if len(processed_images) < max_pic:
-    #     processed_images += processed_images[:1]*(4-len(processed_images))
+    if len(processed_images) < max_pic:
+        processed_images += processed_images[:1]*(4-len(processed_images))
 
-    # if response.status_code == 200:
-    #     return processed_images #, "Обработка завершена!" + text
-    # else:
-    #     return [image]*4 #, f"Ошибка при обработке изображения: {response.status_code}"
+    if response.status_code == 200:
+        return processed_images #, "Обработка завершена!" + text
+    else:
+        return [image]*4 #, f"Ошибка при обработке изображения: {response.status_code}"
 
 # Функция для выбора крупного изображения
 def select_image(index, images):

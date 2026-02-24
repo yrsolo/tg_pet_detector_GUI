@@ -1,3 +1,6 @@
 ruff
 pytest
+flask
+gradio
+requests
 Pillow

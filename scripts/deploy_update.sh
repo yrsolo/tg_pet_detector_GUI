@@ -3,6 +3,7 @@ set -euo pipefail
 
 cd /opt/shadowgen
 git fetch --all --prune
+git reset --hard origin/master
 git pull --ff-only
 
 # если зависимости веба могут меняться — можно раскомментировать:

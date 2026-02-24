@@ -150,9 +150,9 @@ def process_v1():
     out = []
     for pil_img in processed_images:
         buf = io.BytesIO()
-        pil_img.save(buf, format="PNG")
+        pil_img.save(buf, format="JPEG", quality=95)
         b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-        out.append({"mime": "image/png", "b64": b64})
+        out.append({"mime": "image/jpeg", "b64": b64})
 
     dt_ms = int((time.time() - t0) * 1000)
 

@@ -11,6 +11,8 @@ import time
 from PIL import Image
 from flask import Flask, request, jsonify
 
+from utils.contracts import ShadowParams
+
 app = Flask(__name__)
 
 
@@ -45,7 +47,9 @@ def process_v1():
 
     # 2) параметры (можешь оставить как есть: rot из form)
     #    но лучше: params_json в поле params
-    params = dict(request.form)  # безопасно: как раньше
+    # params = dict(request.form)  # безопасно: как раньше
+    params_obj = ShadowParams.from_form(request.form)
+    params = params_obj.__dict__ 
     # если хочешь: params["rot"] -> int(params.get("rot", 0)) и т.п.
 
     def to_int(v, default):

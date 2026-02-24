@@ -23,6 +23,7 @@ import io
 from PIL import Image
 
 from WEB.ml_api import MLClient, MLResponse
+from utils.contracts import ShadowParams
 
 # SERVER_URL = "http://127.0.0.1:9001/process"
 SERVER_URL = "http://127.0.0.1:9001/"
@@ -45,6 +46,8 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
 
 
     client = MLClient(SERVER_URL)
+    params = ShadowParams(rot=rot, max_objects=4, return_debug=False)
+
     try:
         response = client.process(image, params)
     except Exception as e:        

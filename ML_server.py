@@ -4,12 +4,21 @@ import base64
 import io
 import time
 import uuid
+from functools import lru_cache
 
 from flask import Flask, jsonify, request
 from PIL import Image
 
 from contracts.contracts import ShadowParams
-from ML_SERVER.processor import process_image
+
+
+@lru_cache(maxsize=1)
+def _get_process_image():
+    # тяжёлые импорты будут только при первом вызове
+    from ML_SERVER.processor import process_image
+
+    return process_image
+
 
 app = Flask(__name__)
 
@@ -67,6 +76,7 @@ def process_v1():
     # 3) запускаем твой текущий пайплайн
     t_proc0 = time.time()
     try:
+        process_image = _get_process_image()
         processed_images, processed_text = process_image(image, params)
     except Exception as e:
         return jsonify(

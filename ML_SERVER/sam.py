@@ -120,7 +120,6 @@ class SAM_Predictor:
 
     @staticmethod
     def best_masks(scores, masks, n=4):
-
         best_masks = []
         best_masks_indexex = np.argsort(scores)[::-1][:n]
 

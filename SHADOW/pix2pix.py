@@ -188,7 +188,6 @@ class ShadowGenerator:
         masks,
         rots=None,
     ):
-
         if not isinstance(colors, list):
             colors = [colors]
             masks = [masks]

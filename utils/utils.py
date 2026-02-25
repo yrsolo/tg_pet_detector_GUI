@@ -38,7 +38,6 @@ def timer(start=None, text=None):
 
 @memo
 def decontaminate(im, mask, steps=15, blur=9):
-
     if isinstance(im, list):
         return [decontaminate(i, m, steps, blur) for i, m in zip(im, mask)]
 
@@ -101,7 +100,6 @@ def FB_blur_fusion_foreground_estimator_pil(image, F, B, alpha, r=90):
 
 @memo
 def decontaminate_old(im, mask, steps=15, blur=9):
-
     if isinstance(im, list):
         ims = []
         for i, m in zip(im, mask):

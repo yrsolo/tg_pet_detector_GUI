@@ -121,10 +121,36 @@ def get_job(
     key = job_key(job_id)
     if not r.exists(key):
         raise HTTPException(status_code=404, detail="Job not found")
-    j = r.hgetall(key)
+    job = r.hgetall(key)
+
+    images = []
+    if job.get("status") == "done":
+        try:
+            output_keys = json.loads(job.get("output_keys_json") or "[]")
+        except Exception:
+            output_keys = []
+
+        for obj_key in output_keys:
+            url = s3.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": S3_BUCKET, "Key": obj_key},
+                ExpiresIn=3600,
+            )
+            images.append({"mime": "image/png", "url": url})
+
     return {
-        "job_id": job_id,
-        "status": j.get("status"),
-        "created_ms": int(j.get("created_ms", "0")),
-        "updated_ms": int(j.get("updated_ms", "0")),
+        "api_version": "1",
+        "request_id": job_id,
+        "message": job.get("status", "unknown"),
+        "images": images,
+        "meta": {"timings_ms": {"total": 0, "processing": 0}},
+        "warnings": [],
+        "job": {
+            "id": job_id,
+            "status": job.get("status"),
+            "created_at": job.get("created_at"),
+            "started_at": job.get("started_at"),
+            "finished_at": job.get("finished_at"),
+            "updated_at": job.get("updated_at"),
+        },
     }

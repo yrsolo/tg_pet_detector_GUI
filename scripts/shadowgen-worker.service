@@ -1,0 +1,25 @@
+[Unit]
+Description=ShadowGEN Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/shadowgen
+ExecStart=/opt/shadowgen/.venv/bin/python /opt/shadowgen/worker.py
+Restart=always
+RestartSec=2
+
+# Redis на VPS локальный
+Environment=REDIS_HOST=127.0.0.1
+Environment=REDIS_PORT=6379
+Environment=QUEUE_NAME=queue:jobs
+Environment=PROCESSING_NAME=queue:processing
+
+Environment=ML_TIMEOUT_SEC=300
+
+# (опционально) чтобы меньше спамило буферизацией
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

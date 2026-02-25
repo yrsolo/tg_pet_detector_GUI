@@ -15,4 +15,7 @@ sudo systemctl is-active shadowgen >/dev/null
 sudo systemctl restart shadowgen-api
 sudo systemctl is-active shadowgen-api >/dev/null
 
+sudo systemctl restart shadowgen-worker
+sudo systemctl is-active shadowgen-worker >/dev/null
+
 echo "OK: deployed and restarted"

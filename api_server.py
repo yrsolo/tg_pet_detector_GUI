@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import time
@@ -7,6 +8,7 @@ from typing import Any, Optional
 import boto3
 import redis
 from botocore.client import Config
+from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 
@@ -92,14 +94,38 @@ async def create_job(
     if not content:
         raise HTTPException(status_code=400, detail="Empty image")
 
-    input_key = f"jobs/{job_id}/input_{image.filename or 'image'}"
-    s3_put_bytes(input_key, content, image.content_type or "application/octet-stream")
+    # --- dedup input by sha256(file bytes) ---
+    sha = hashlib.sha256(content).hexdigest()
 
+    # расширение — чисто для удобства (можно оставить .bin)
+    _, ext = os.path.splitext(image.filename or "")
+    ext = (ext or ".bin").lower()
+
+    input_key = f"cache/{sha}/input{ext}"
+
+    # проверить есть ли уже в S3
+    exists = False
+    try:
+        s3.head_object(Bucket=S3_BUCKET, Key=input_key)
+        exists = True
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "")
+        if code not in ("404", "NoSuchKey", "NotFound"):
+            raise
+
+    # залить только если нет
+    if not exists:
+        s3_put_bytes(
+            input_key,
+            content,
+            image.content_type or "application/octet-stream",
+        )
     job = {
         "job_id": job_id,
         "status": "queued",
         "created_ms": str(now_ms()),
         "updated_ms": str(now_ms()),
+        "input_sha256": sha,
         "input_key": input_key,
         "params_json": json.dumps(p, ensure_ascii=False),
         "output_keys_json": json.dumps([], ensure_ascii=False),

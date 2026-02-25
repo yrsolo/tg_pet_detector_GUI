@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import time
@@ -7,6 +8,7 @@ from typing import Any, Optional
 import boto3
 import redis
 from botocore.client import Config
+from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 
@@ -92,14 +94,38 @@ async def create_job(
     if not content:
         raise HTTPException(status_code=400, detail="Empty image")
 
-    input_key = f"jobs/{job_id}/input_{image.filename or 'image'}"
-    s3_put_bytes(input_key, content, image.content_type or "application/octet-stream")
+    # --- dedup input by sha256(file bytes) ---
+    sha = hashlib.sha256(content).hexdigest()
 
+    # расширение — чисто для удобства (можно оставить .bin)
+    _, ext = os.path.splitext(image.filename or "")
+    ext = (ext or ".bin").lower()
+
+    input_key = f"cache/{sha}/input{ext}"
+
+    # проверить есть ли уже в S3
+    exists = False
+    try:
+        s3.head_object(Bucket=S3_BUCKET, Key=input_key)
+        exists = True
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code", "")
+        if code not in ("404", "NoSuchKey", "NotFound"):
+            raise
+
+    # залить только если нет
+    if not exists:
+        s3_put_bytes(
+            input_key,
+            content,
+            image.content_type or "application/octet-stream",
+        )
     job = {
         "job_id": job_id,
         "status": "queued",
         "created_ms": str(now_ms()),
         "updated_ms": str(now_ms()),
+        "input_sha256": sha,
         "input_key": input_key,
         "params_json": json.dumps(p, ensure_ascii=False),
         "output_keys_json": json.dumps([], ensure_ascii=False),
@@ -121,10 +147,36 @@ def get_job(
     key = job_key(job_id)
     if not r.exists(key):
         raise HTTPException(status_code=404, detail="Job not found")
-    j = r.hgetall(key)
+    job = r.hgetall(key)
+
+    images = []
+    if job.get("status") == "done":
+        try:
+            output_keys = json.loads(job.get("output_keys_json") or "[]")
+        except Exception:
+            output_keys = []
+
+        for obj_key in output_keys:
+            url = s3.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": S3_BUCKET, "Key": obj_key},
+                ExpiresIn=3600,
+            )
+            images.append({"mime": "image/png", "url": url})
+
     return {
-        "job_id": job_id,
-        "status": j.get("status"),
-        "created_ms": int(j.get("created_ms", "0")),
-        "updated_ms": int(j.get("updated_ms", "0")),
+        "api_version": "1",
+        "request_id": job_id,
+        "message": job.get("status", "unknown"),
+        "images": images,
+        "meta": {"timings_ms": {"total": 0, "processing": 0}},
+        "warnings": [],
+        "job": {
+            "id": job_id,
+            "status": job.get("status"),
+            "created_at": job.get("created_at"),
+            "started_at": job.get("started_at"),
+            "finished_at": job.get("finished_at"),
+            "updated_at": job.get("updated_at"),
+        },
     }

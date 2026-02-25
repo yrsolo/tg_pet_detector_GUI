@@ -9,6 +9,7 @@ import sys
 import gradio as gr
 
 from contracts.contracts import ShadowParams
+from WEB.job_api import JobClient
 from WEB.ml_api import MLClient
 
 SERVER_URL = "http://127.0.0.1:9001/"
@@ -18,7 +19,18 @@ CERTIFICATE_PATH = "/opt/shadowgen/https-cert/certificate.pem"
 PRIVATE_KEY_PATH = "/opt/shadowgen/https-cert/private_key.pem"
 
 # Получаем окружение из переменных окружения
-ENV = os.getenv("ENV", "local")  # По умолчанию "local"
+ENV = os.getenv("ENV", "local")  # По умолчанию "local"\
+
+JOB_API_URL = os.getenv("JOB_API_URL", "https://style-app.solofarm.ru/api")
+JOB_API_KEY = os.getenv("API_KEY")  # если используешь
+
+job_client = JobClient(
+    base_url=JOB_API_URL, api_key=JOB_API_KEY, poll_interval=0.35, timeout_sec=180
+)
+
+ml_client = MLClient(SERVER_URL)
+
+client = job_client
 
 
 # @memo
@@ -29,7 +41,6 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
     if image.size[0] > max_size or image.size[1] > max_size:
         image.thumbnail((max_size, max_size))
 
-    client = MLClient(SERVER_URL)
     params = ShadowParams(rot=rot, max_objects=4, return_debug=False)
 
     try:

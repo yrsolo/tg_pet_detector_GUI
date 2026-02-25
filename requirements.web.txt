@@ -19,3 +19,5 @@ uvicorn[standard]
 python-multipart
 
 pre-commit
+structlog 
+python-json-logger

@@ -54,7 +54,7 @@ S3_SECRET_ACCESS_KEY=...
 
 # --- UI ---
 JOB_API_URL=https://<your-domain>/api
-
+```
 
 Права:
 

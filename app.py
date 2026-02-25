@@ -9,8 +9,12 @@ import sys
 import gradio as gr
 
 from contracts.contracts import ShadowParams
+from log.logging_setup import bind_context, get_logger, log_timing, new_request_id, setup_logging
 from WEB.job_api import JobClient
 from WEB.ml_api import MLClient
+
+setup_logging()
+log = get_logger("UI")
 
 SERVER_URL = "http://127.0.0.1:9001/"
 
@@ -34,8 +38,9 @@ client = job_client
 
 
 # @memo
-def process_image_server(image, rot, max_size=1024, max_pic=2):
+def process_image_server(image, rot, max_size=1024, max_pic=2, request_id=None):
     """Sends the image and rotation parameter to the ML server and returns processed images."""
+
     params = {"rot": rot}
 
     if image.size[0] > max_size or image.size[1] > max_size:
@@ -44,11 +49,11 @@ def process_image_server(image, rot, max_size=1024, max_pic=2):
     params = ShadowParams(rot=rot, max_objects=4, return_debug=False)
 
     try:
-        response = client.process(image, params)
+        response, job_id = client.process(image, params, request_id=request_id)
     except Exception as e:
         print(f"Ошибка при отправке запроса: {e}")
 
-    return response.images
+    return response.images, job_id
 
 
 # Функция для выбора крупного изображения
@@ -101,7 +106,31 @@ with gr.Blocks() as app:
 
     def process_image(image, rot):
         """Sends the image and rotation parameter to the ML server and returns processed images."""
-        processed_images = process_image_server(image, rot)
+        rid = new_request_id()
+        bind_context(request_id=rid)
+        log.info("ui_request_received", has_image=image is not None, shadow_angle=rot)
+        try:
+            with log_timing(log, "ui_process_total"):
+                # 1) валидируем вход
+                if image is None:
+                    log.warning("ui_no_image")
+                    return None, f"Нет изображения. request_id={rid}"
+
+                # 2) вызываем ML / API
+                log.info("request_call_start")
+                processed_images, job_id = process_image_server(
+                    image, rot, request_id=rid
+                )  # см. ниже
+                log.info("request_call_done", job_id=job_id)
+
+                # 3) пост-обработка/вывод
+                # log.info("ui_success")
+                return processed_images, f"OK. request_id={rid}"
+        except Exception:
+            # ВАЖНО: exc_info=True чтобы stacktrace улетел в логи
+            log.error("ui_process_failed", exc_info=True)
+            return None, f"Ошибка обработки. request_id={rid}"
+
         return processed_images
 
     def reload_app():

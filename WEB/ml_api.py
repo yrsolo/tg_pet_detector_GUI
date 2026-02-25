@@ -21,15 +21,22 @@ class MLClient:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    def process(self, pil_image: Image.Image, params: ShadowParams) -> MLResponse:
+    def process(
+        self, pil_image: Image.Image, params: ShadowParams, request_id: str = None
+    ) -> MLResponse:
         buf = io.BytesIO()
         pil_image.save(buf, format="JPEG", quality=95)
         buf.seek(0)
+
+        headers = {}
+        if request_id is not None:
+            headers["X-Request-ID"] = request_id
 
         resp = requests.post(
             f"{self.base_url}/v1/process",
             data=params.to_dict(),
             files={"image": ("image.jpg", buf.getvalue(), "image/jpeg")},
+            headers=headers,
             timeout=self.timeout,
         )
         resp.raise_for_status()

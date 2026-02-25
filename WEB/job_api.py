@@ -8,6 +8,10 @@ from typing import Any, Optional
 import requests
 from PIL import Image
 
+from log.logging_setup import bind_context, get_logger, log_timing
+
+log = get_logger("UI.job_api")
+
 
 @dataclass
 class JobClient:
@@ -22,7 +26,9 @@ class JobClient:
             h["X-API-Key"] = self.api_key
         return h
 
-    def create_job(self, image_pil: Image.Image, params: dict[str, Any]) -> str:
+    def create_job(
+        self, image_pil: Image.Image, params: dict[str, Any], request_id: str = None
+    ) -> str:
         # JPEG нормально для скорости; если надо без потерь — меняем на PNG
         buf = io.BytesIO()
         image_pil.save(buf, format="JPEG", quality=95)
@@ -30,7 +36,9 @@ class JobClient:
 
         resp = requests.post(
             f"{self.base_url.rstrip('/')}/v1/jobs",
-            headers=self._headers(),
+            headers=self._headers() | {"X-Request-ID": request_id}
+            if request_id
+            else self._headers(),
             files={"image": ("image.jpg", buf.getvalue(), "image/jpeg")},
             data={"params": requests.utils.json.dumps(params)},  # JSON string
             timeout=60,
@@ -38,19 +46,21 @@ class JobClient:
         resp.raise_for_status()
         return resp.json()["job_id"]
 
-    def get_job(self, job_id: str) -> dict[str, Any]:
+    def get_job(self, job_id: str, request_id: str = None) -> dict[str, Any]:
+        headers = self._headers() | {"X-Request-ID": request_id} if request_id else self._headers()
         resp = requests.get(
             f"{self.base_url.rstrip('/')}/v1/jobs/{job_id}",
-            headers=self._headers(),
+            headers=headers,
             timeout=30,
         )
         resp.raise_for_status()
         return resp.json()
 
-    def wait_done(self, job_id: str) -> dict[str, Any]:
+    def wait_done(self, job_id: str, request_id: str = None) -> dict[str, Any]:
         t0 = time.time()
+
         while True:
-            j = self.get_job(job_id)
+            j = self.get_job(job_id, request_id=request_id)
             status = (j.get("job") or {}).get("status") or j.get("message")
             if status == "done":
                 return j
@@ -73,7 +83,23 @@ class JobClient:
             images.append(Image.open(io.BytesIO(r.content)).convert("RGBA"))
         return images
 
-    def submit_and_wait(self, image_pil: Image.Image, params: dict[str, Any]) -> list[Image.Image]:
+    def submit_and_wait(
+        self, image_pil: Image.Image, params: dict[str, Any], request_id: str = None
+    ) -> tuple[list[Image.Image], str]:
         job_id = self.create_job(image_pil, params)
-        payload = self.wait_done(job_id)
-        return self.fetch_images(payload)
+
+        bind_context(job_id=job_id)
+        log.info("job_created", job_id=job_id)
+
+        with log_timing(log, "job_wait", job_id=job_id):
+            payload = self.wait_done(job_id)
+
+        with log_timing(log, "job_fetch_images", job_id=job_id):
+            images = self.fetch_images(payload)
+
+        return images, job_id
+
+    def process(
+        self, image_pil: Image.Image, params: dict[str, Any], request_id: str = None
+    ) -> tuple[list[Image.Image], str]:
+        return self.submit_and_wait(image_pil, params, request_id=request_id)

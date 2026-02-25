@@ -1,6 +1,7 @@
 # job_api.py
 
 import io
+import json
 import time
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -40,7 +41,7 @@ class JobClient:
             if request_id
             else self._headers(),
             files={"image": ("image.jpg", buf.getvalue(), "image/jpeg")},
-            data={"params": requests.utils.json.dumps(params)},  # JSON string
+            data={"params": json.dumps(params)},  # JSON string
             timeout=60,
         )
         resp.raise_for_status()

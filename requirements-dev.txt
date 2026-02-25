@@ -4,3 +4,4 @@ flask
 gradio
 requests
 Pillow
+structlog

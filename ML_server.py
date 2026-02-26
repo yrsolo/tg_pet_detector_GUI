@@ -62,7 +62,7 @@ def process_v1():
             }
         ), 400
 
-    params_obj = ShadowParams.from_form(request.form)
+    params_obj = ShadowParams.from_dict(request.form)
     params = params_obj.__dict__
 
     def to_int(v, default):

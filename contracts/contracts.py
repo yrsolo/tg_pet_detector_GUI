@@ -21,7 +21,7 @@ class ShadowParams:
         }
 
     @staticmethod
-    def from_form(form: dict) -> "ShadowParams":
+    def from_dict(form: dict) -> "ShadowParams":
         """
         Парсит request.form (там всё строки) -> нормальные типы
         """

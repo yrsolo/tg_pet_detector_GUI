@@ -3,6 +3,7 @@ import json
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import boto3
@@ -43,6 +44,10 @@ QUEUE_KEY = "queue:jobs"
 
 def now_ms() -> int:
     return int(time.time() * 1000)
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def require_api_key(x_api_key: Optional[str]):
@@ -123,6 +128,8 @@ async def create_job(
     job = {
         "job_id": job_id,
         "status": "queued",
+        "created_at": now_iso(),
+        "updated_at": now_iso(),
         "created_ms": str(now_ms()),
         "updated_ms": str(now_ms()),
         "input_sha256": sha,
@@ -131,6 +138,7 @@ async def create_job(
         "output_keys_json": json.dumps([], ensure_ascii=False),
         "message": "",
         "error": "",
+        "error_message": "",
     }
     r.hset(job_key(job_id), mapping=job)
     r.rpush(QUEUE_KEY, job_id)
@@ -178,5 +186,6 @@ def get_job(
             "started_at": job.get("started_at"),
             "finished_at": job.get("finished_at"),
             "updated_at": job.get("updated_at"),
+            "error_message": job.get("error_message", ""),
         },
     }

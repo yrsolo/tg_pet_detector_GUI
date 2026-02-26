@@ -46,14 +46,18 @@ def process_image_server(image, rot, max_size=1024, max_pic=2, request_id=None):
     if image.size[0] > max_size or image.size[1] > max_size:
         image.thumbnail((max_size, max_size))
 
-    params = ShadowParams(rot=rot, max_objects=4, return_debug=False)
+    params = ShadowParams(rot=rot, max_objects=4, return_debug=False).to_dict()
 
+    images = None
+    job_id = None
     try:
-        response, job_id = client.process(image, params, request_id=request_id)
+        images, job_id = client.process(image, params, request_id=request_id)
     except Exception as e:
         print(f"Ошибка при отправке запроса: {e}")
 
-    return response.images, job_id
+    if images is None:
+        raise RuntimeError("Нет ответа от сервера обработки")
+    return images, job_id
 
 
 # Функция для выбора крупного изображения
@@ -125,7 +129,7 @@ with gr.Blocks() as app:
 
                 # 3) пост-обработка/вывод
                 # log.info("ui_success")
-                return processed_images, f"OK. request_id={rid}"
+                return processed_images  # , f"OK. request_id={rid}"
         except Exception:
             # ВАЖНО: exc_info=True чтобы stacktrace улетел в логи
             log.error("ui_process_failed", exc_info=True)

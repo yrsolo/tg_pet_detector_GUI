@@ -17,6 +17,8 @@ Environment=QUEUE_NAME=queue:jobs
 Environment=PROCESSING_NAME=queue:processing
 
 Environment=ML_TIMEOUT_SEC=300
+Environment=SHADOWGEN_SERVICE=worker
+Environment=SHADOWGEN_ENV=prod
 
 # (опционально) чтобы меньше спамило буферизацией
 Environment=PYTHONUNBUFFERED=1

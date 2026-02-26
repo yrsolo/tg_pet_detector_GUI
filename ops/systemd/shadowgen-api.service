@@ -7,6 +7,8 @@ Wants=redis-server.service
 Type=simple
 WorkingDirectory=/opt/shadowgen
 EnvironmentFile=/opt/shadowgen/.env
+Environment=SHADOWGEN_SERVICE=api
+Environment=SHADOWGEN_ENV=prod
 ExecStart=/opt/shadowgen/.venv/bin/uvicorn api_server:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=2

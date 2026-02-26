@@ -1,0 +1,39 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: shadowgen-journal
+    journal:
+      path: /var/log/journal
+      max_age: 12h
+      labels:
+        job: systemd-journal
+    relabel_configs:
+      - source_labels: ["__journal__systemd_unit"]
+        target_label: unit
+      - source_labels: ["__journal__hostname"]
+        target_label: host
+    pipeline_stages:
+      - json:
+          expressions:
+            event: event
+            level: level
+            service: service
+            env: env
+            request_id: request_id
+            job_id: job_id
+            duration_ms: duration_ms
+      - labels:
+          service:
+          env:
+          level:
+      - match:
+          selector: '{unit=~"shadowgen(-api|-worker)?\\.service"}'
+          action: keep

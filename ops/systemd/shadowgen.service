@@ -10,6 +10,8 @@ WorkingDirectory=/opt/shadowgen
 # переменные окружения (оставим твой ENV)
 Environment=ENV=production
 Environment=PYTHONUNBUFFERED=1
+Environment=SHADOWGEN_SERVICE=web
+Environment=SHADOWGEN_ENV=prod
 
 # запуск из виртуального окружения БЕЗ source activate
 ExecStart=/opt/shadowgen/.venv/bin/python /opt/shadowgen/app.py

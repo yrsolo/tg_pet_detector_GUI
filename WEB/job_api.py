@@ -9,7 +9,7 @@ from typing import Any, Optional
 import requests
 from PIL import Image
 
-from log.logging_setup import bind_context, get_logger, log_timing
+from log.logging_setup import bind_context, get_logger, log_timing, new_request_id
 
 log = get_logger("UI.job_api")
 
@@ -21,10 +21,12 @@ class JobClient:
     poll_interval: float = 0.35  # для интерактива
     timeout_sec: float = 120.0  # на всякий
 
-    def _headers(self) -> dict[str, str]:
+    def _headers(self, request_id: Optional[str] = None) -> dict[str, str]:
         h = {}
         if self.api_key:
             h["X-API-Key"] = self.api_key
+        if request_id:
+            h["X-Request-ID"] = request_id
         return h
 
     def create_job(
@@ -37,9 +39,7 @@ class JobClient:
 
         resp = requests.post(
             f"{self.base_url.rstrip('/')}/v1/jobs",
-            headers=self._headers() | {"X-Request-ID": request_id}
-            if request_id
-            else self._headers(),
+            headers=self._headers(request_id=request_id),
             files={"image": ("image.jpg", buf.getvalue(), "image/jpeg")},
             data={"params": json.dumps(params)},  # JSON string
             timeout=60,
@@ -48,10 +48,9 @@ class JobClient:
         return resp.json()["job_id"]
 
     def get_job(self, job_id: str, request_id: str = None) -> dict[str, Any]:
-        headers = self._headers() | {"X-Request-ID": request_id} if request_id else self._headers()
         resp = requests.get(
             f"{self.base_url.rstrip('/')}/v1/jobs/{job_id}",
-            headers=headers,
+            headers=self._headers(request_id=request_id),
             timeout=30,
         )
         resp.raise_for_status()
@@ -87,18 +86,24 @@ class JobClient:
     def submit_and_wait(
         self, image_pil: Image.Image, params: dict[str, Any], request_id: str = None
     ) -> tuple[list[Image.Image], str]:
-        job_id = self.create_job(image_pil, params)
+        rid = request_id or new_request_id()
+        bind_context(request_id=rid)
+        try:
+            with log_timing(log, "job_submit"):
+                job_id = self.create_job(image_pil, params, request_id=rid)
 
-        bind_context(job_id=job_id)
-        log.info("job_created", job_id=job_id)
+            bind_context(job_id=job_id)
+            log.info("job_created", job_id=job_id)
 
-        with log_timing(log, "job_wait", job_id=job_id):
-            payload = self.wait_done(job_id)
+            with log_timing(log, "job_wait", job_id=job_id):
+                payload = self.wait_done(job_id, request_id=rid)
 
-        with log_timing(log, "job_fetch_images", job_id=job_id):
-            images = self.fetch_images(payload)
-
-        return images, job_id
+            with log_timing(log, "job_fetch_images", job_id=job_id):
+                images = self.fetch_images(payload)
+            return images, job_id
+        except Exception:
+            log.error("job_api_failed", exc_info=True)
+            raise
 
     def process(
         self, image_pil: Image.Image, params: dict[str, Any], request_id: str = None
